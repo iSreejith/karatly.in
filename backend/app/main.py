@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import face
+from app.routers import face, chat
 
 app = FastAPI(title="Karatly API")
 
@@ -12,6 +12,7 @@ app.add_middleware(
 )
 
 app.include_router(face.router)
+app.include_router(chat.router)
 
 
 @app.get("/health")
