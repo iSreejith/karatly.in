@@ -20,7 +20,15 @@ export async function initCamera() {
 
 export async function initAudio() {
     // Request audio separately, only when needed
-    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+        },
+    });
+    // Mute all tracks by default — only enable when actively recording
+    audioStream.getAudioTracks().forEach(track => { track.enabled = false; });
     return audioStream;
 }
 

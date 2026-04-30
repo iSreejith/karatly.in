@@ -5,9 +5,20 @@ let mediaRecorder = null;
 let audioChunks = [];
 let isListening = false;
 let detectedLanguage = 'en';
+let micStream = null;
 
 export function getDetectedLanguage() {
     return detectedLanguage;
+}
+
+export function setMicStream(stream) {
+    micStream = stream;
+}
+
+function setMicEnabled(enabled) {
+    if (micStream) {
+        micStream.getAudioTracks().forEach(track => { track.enabled = enabled; });
+    }
 }
 
 export function initSpeechRecognition(onResult, onError) {
@@ -54,12 +65,14 @@ export function initSpeechRecognition(onResult, onError) {
 export function startListening() {
     if (!recognition) return;
     isListening = true;
+    setMicEnabled(true);
     recognition.start();
     updateListeningIndicator(true);
 }
 
 export function stopListening() {
     isListening = false;
+    setMicEnabled(false);
     if (recognition) {
         recognition.stop();
     }
@@ -67,6 +80,7 @@ export function stopListening() {
 }
 
 export function pauseListening() {
+    setMicEnabled(false);
     if (recognition && isListening) {
         recognition.stop();
     }
@@ -74,6 +88,7 @@ export function pauseListening() {
 
 export function resumeListening() {
     if (recognition && isListening) {
+        setMicEnabled(true);
         recognition.start();
     }
 }

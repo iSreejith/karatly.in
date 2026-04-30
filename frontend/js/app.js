@@ -11,6 +11,7 @@ import {
     resumeListening,
     startAudioRecording,
     getDetectedLanguage,
+    setMicStream,
 } from './speech.js';
 import { initAudioPlayer, playAudio } from './audio-player.js';
 import { analyzeFace, startChat, sendChat, cloneVoice, speak } from './api-client.js';
@@ -19,100 +20,116 @@ let sessionId = null;
 let isProcessing = false;
 
 async function main() {
-    // Step 1: Wait for consent
-    await initConsent();
-
-    // Step 2: Show loading, initialize everything
-    showScreen('loading-screen');
-
-    setLoadingStatus('Starting camera...');
-    const videoElement = await initCamera();
-
-    setLoadingStatus('Loading face detection...');
-    await initFaceMesh();
-
-    // Step 3: Detect face from camera
-    setLoadingStatus('Looking for your face...');
-    let faceData = null;
-    for (let attempt = 0; attempt < 30; attempt++) {
-        faceData = detectFace(videoElement, performance.now());
-        if (faceData) break;
-        await sleep(200);
-    }
-
-    // Step 4: Capture frame and analyze face
-    setLoadingStatus('Analyzing your face...');
-    const frameBase64 = captureFrame();
-    let avatarConfig;
     try {
-        const analysis = await analyzeFace(frameBase64);
-        avatarConfig = analysis.avatar_config;
-    } catch (err) {
-        console.error('Face analysis failed, using defaults:', err);
-        avatarConfig = {
-            skin_color: '#D2A67D',
-            hair_color: '#3B2417',
-            hair_style: 'short_wavy',
-            eye_color: '#5B4C3A',
-            face_shape: 'oval',
-            has_glasses: false,
-            has_facial_hair: false,
-        };
-    }
+        // Step 1: Wait for consent
+        await initConsent();
 
-    // Step 5: Switch to avatar screen FIRST so canvas has dimensions
-    setLoadingStatus('Creating your avatar...');
-    const language = getDetectedLanguage() || navigator.language?.split('-')[0] || 'en';
-    document.getElementById('language-indicator').textContent = language.toUpperCase();
-    showScreen('avatar-screen');
+        // Step 2: Show loading, initialize camera (video only, no mic)
+        showScreen('loading-screen');
 
-    // Small delay to let the browser layout the canvas
-    await sleep(100);
+        setLoadingStatus('Starting camera...');
+        const videoElement = await initCamera();
 
-    // Step 6: Build 3D avatar (canvas now has real dimensions)
-    const canvas = document.getElementById('avatar-canvas');
-    initAvatar(canvas);
-    buildAvatar(avatarConfig, faceData?.landmarks);
-    startAnimationLoop();
-
-    // Step 7: Initialize audio playback
-    initAudioPlayer();
-
-    // Start chat — get initial greeting (NO mic yet)
-    try {
-        const greeting = await startChat(language);
-        sessionId = greeting.session_id;
-        setAvatarEmotion(greeting.emotion);
-
-        // Speak the greeting
-        await sayText(greeting.text, greeting.emotion);
-    } catch (err) {
-        console.error('Chat start failed:', err);
-    }
-
-    // Step 8: NOW enable the microphone (after greeting is done)
-    await initAudio();
-    const audioStream = getAudioStream();
-
-    // Step 9: Start voice cloning from user's first words
-    if (audioStream) {
-        startAudioRecording(audioStream).then(async (audioBase64) => {
-            if (sessionId) {
-                try {
-                    await cloneVoice(audioBase64, sessionId);
-                    console.log('Voice cloned successfully');
-                } catch (err) {
-                    console.warn('Voice cloning failed, using default voice:', err);
-                }
+        // Step 3: Try face detection (skip if it takes too long)
+        setLoadingStatus('Loading face detection...');
+        let faceData = null;
+        try {
+            await initFaceMesh();
+            setLoadingStatus('Looking for your face...');
+            for (let attempt = 0; attempt < 15; attempt++) {
+                faceData = detectFace(videoElement, performance.now());
+                if (faceData) break;
+                await sleep(300);
             }
-        });
-    }
+        } catch (err) {
+            console.warn('Face mesh init failed, skipping:', err);
+        }
 
-    // Step 10: Start listening for user speech
-    initSpeechRecognition(onUserSpeech, (err) => {
-        console.warn('Speech recognition error:', err);
-    });
-    startListening();
+        // Step 4: Analyze face (with timeout)
+        setLoadingStatus('Analyzing your face...');
+        const frameBase64 = captureFrame();
+        let avatarConfig;
+        try {
+            const analysis = await Promise.race([
+                analyzeFace(frameBase64),
+                sleep(15000).then(() => { throw new Error('Face analysis timeout'); }),
+            ]);
+            avatarConfig = analysis.avatar_config;
+            console.log('Face analysis result:', avatarConfig);
+        } catch (err) {
+            console.warn('Face analysis failed, using defaults:', err);
+            avatarConfig = {
+                skin_color: '#D2A67D',
+                hair_color: '#3B2417',
+                hair_style: 'short_wavy',
+                eye_color: '#5B4C3A',
+                face_shape: 'oval',
+                has_glasses: false,
+                has_facial_hair: false,
+            };
+        }
+
+        // Step 5: Switch to avatar screen so canvas gets dimensions
+        const language = getDetectedLanguage() || navigator.language?.split('-')[0] || 'en';
+        document.getElementById('language-indicator').textContent = language.toUpperCase();
+        showScreen('avatar-screen');
+        await sleep(200);
+
+        // Step 6: Build 3D avatar
+        const canvas = document.getElementById('avatar-canvas');
+        console.log('Canvas size:', canvas.clientWidth, canvas.clientHeight);
+        initAvatar(canvas);
+        buildAvatar(avatarConfig, faceData?.landmarks);
+        startAnimationLoop();
+        console.log('Avatar built and animation started');
+
+        // Step 7: Initialize audio playback
+        initAudioPlayer();
+
+        // Step 8: Start chat — get initial greeting (NO mic yet)
+        try {
+            const greeting = await startChat(language);
+            sessionId = greeting.session_id;
+            console.log('Greeting:', greeting.text);
+            setAvatarEmotion(greeting.emotion);
+            await sayText(greeting.text, greeting.emotion);
+        } catch (err) {
+            console.error('Chat start failed:', err);
+        }
+
+        // Step 9: NOW enable the microphone
+        try {
+            const rawAudioStream = await initAudio();
+            setMicStream(rawAudioStream);
+        } catch (err) {
+            console.warn('Mic init failed:', err);
+        }
+        const audioStream = getAudioStream();
+
+        // Step 10: Voice cloning in background
+        if (audioStream) {
+            startAudioRecording(audioStream).then(async (audioBase64) => {
+                if (sessionId) {
+                    try {
+                        await cloneVoice(audioBase64, sessionId);
+                        console.log('Voice cloned successfully');
+                    } catch (err) {
+                        console.warn('Voice cloning failed:', err);
+                    }
+                }
+            });
+        }
+
+        // Step 11: Start listening
+        initSpeechRecognition(onUserSpeech, (err) => {
+            console.warn('Speech recognition error:', err);
+        });
+        startListening();
+
+    } catch (err) {
+        console.error('App initialization failed:', err);
+        setLoadingStatus('Something went wrong. Check console for details.');
+    }
 }
 
 async function onUserSpeech(text, language) {
@@ -121,11 +138,8 @@ async function onUserSpeech(text, language) {
     pauseListening();
 
     try {
-        // Send to chat API
         const response = await sendChat(text, language, sessionId);
         setAvatarEmotion(response.emotion);
-
-        // Speak the response
         await sayText(response.text, response.emotion);
     } catch (err) {
         console.error('Chat error:', err);
@@ -136,13 +150,10 @@ async function onUserSpeech(text, language) {
 }
 
 async function sayText(text, emotion) {
-    // Pause mic so it doesn't pick up the avatar's speech
     pauseListening();
-
-    // Start lip sync animation
     speakText(text, emotion);
 
-    // Try to get TTS audio
+    // Try TTS service first
     try {
         const audioData = await speak(text, getDetectedLanguage(), sessionId);
         if (audioData) {
@@ -151,7 +162,7 @@ async function sayText(text, emotion) {
             return;
         }
     } catch (err) {
-        console.warn('TTS failed, using browser speech synthesis:', err);
+        // TTS unavailable, fall through to browser synthesis
     }
 
     // Fallback: browser speech synthesis
@@ -162,9 +173,10 @@ async function sayText(text, emotion) {
 
     await new Promise((resolve) => {
         utterance.onend = resolve;
+        // Safety timeout in case onend never fires
+        setTimeout(resolve, 10000);
     });
 
-    // Resume mic after speaking is done
     resumeListening();
 }
 
@@ -172,5 +184,4 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// Start the app
 main().catch(console.error);
