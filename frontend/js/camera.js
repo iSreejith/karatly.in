@@ -1,19 +1,27 @@
 // frontend/js/camera.js
 
 let videoElement = null;
-let stream = null;
+let videoStream = null;
+let audioStream = null;
 
 export async function initCamera() {
     videoElement = document.getElementById('camera-feed');
-    stream = await navigator.mediaDevices.getUserMedia({
+    // Only request video for face analysis — no audio yet
+    videoStream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480, facingMode: 'user' },
-        audio: true,
+        audio: false,
     });
-    videoElement.srcObject = stream;
+    videoElement.srcObject = videoStream;
     await new Promise((resolve) => {
         videoElement.onloadedmetadata = resolve;
     });
     return videoElement;
+}
+
+export async function initAudio() {
+    // Request audio separately, only when needed
+    audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    return audioStream;
 }
 
 export function captureFrame() {
@@ -23,13 +31,12 @@ export function captureFrame() {
     canvas.height = videoElement.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoElement, 0, 0);
-    // Return base64 without the data:image/... prefix
     return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 }
 
 export function getAudioStream() {
-    if (!stream) return null;
-    return new MediaStream(stream.getAudioTracks());
+    if (!audioStream) return null;
+    return new MediaStream(audioStream.getAudioTracks());
 }
 
 export function stopCamera() {

@@ -1,6 +1,6 @@
 // frontend/js/app.js
 import { initConsent, showScreen, setLoadingStatus } from './consent.js';
-import { initCamera, captureFrame, getAudioStream, stopCamera } from './camera.js';
+import { initCamera, initAudio, captureFrame, getAudioStream, stopCamera } from './camera.js';
 import { initFaceMesh, detectFace } from './face-mesh.js';
 import { initAvatar, buildAvatar } from './avatar.js';
 import { startAnimationLoop, speakText, setAvatarEmotion } from './avatar-animation.js';
@@ -75,14 +75,10 @@ async function main() {
     buildAvatar(avatarConfig, faceData?.landmarks);
     startAnimationLoop();
 
-    // Step 7: Initialize audio
+    // Step 7: Initialize audio playback
     initAudioPlayer();
 
-    // Step 8: Start voice cloning in background
-    const audioStream = getAudioStream();
-    let voiceClonePromise = null;
-
-    // Start chat — get initial greeting
+    // Start chat — get initial greeting (NO mic yet)
     try {
         const greeting = await startChat(language);
         sessionId = greeting.session_id;
@@ -94,9 +90,13 @@ async function main() {
         console.error('Chat start failed:', err);
     }
 
+    // Step 8: NOW enable the microphone (after greeting is done)
+    await initAudio();
+    const audioStream = getAudioStream();
+
     // Step 9: Start voice cloning from user's first words
     if (audioStream) {
-        voiceClonePromise = startAudioRecording(audioStream).then(async (audioBase64) => {
+        startAudioRecording(audioStream).then(async (audioBase64) => {
             if (sessionId) {
                 try {
                     await cloneVoice(audioBase64, sessionId);
