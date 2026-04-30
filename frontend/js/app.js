@@ -60,26 +60,27 @@ async function main() {
         };
     }
 
-    // Step 5: Build 3D avatar
+    // Step 5: Switch to avatar screen FIRST so canvas has dimensions
     setLoadingStatus('Creating your avatar...');
+    const language = getDetectedLanguage() || navigator.language?.split('-')[0] || 'en';
+    document.getElementById('language-indicator').textContent = language.toUpperCase();
+    showScreen('avatar-screen');
+
+    // Small delay to let the browser layout the canvas
+    await sleep(100);
+
+    // Step 6: Build 3D avatar (canvas now has real dimensions)
     const canvas = document.getElementById('avatar-canvas');
     initAvatar(canvas);
     buildAvatar(avatarConfig, faceData?.landmarks);
     startAnimationLoop();
 
-    // Step 6: Initialize audio
+    // Step 7: Initialize audio
     initAudioPlayer();
 
-    // Step 7: Start voice cloning in background
-    setLoadingStatus('Preparing voice...');
+    // Step 8: Start voice cloning in background
     const audioStream = getAudioStream();
     let voiceClonePromise = null;
-
-    // Step 8: Start conversation
-    const language = getDetectedLanguage() || navigator.language?.split('-')[0] || 'en';
-    document.getElementById('language-indicator').textContent = language.toUpperCase();
-
-    showScreen('avatar-screen');
 
     // Start chat — get initial greeting
     try {
