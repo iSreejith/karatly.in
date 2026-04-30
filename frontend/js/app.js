@@ -136,6 +136,9 @@ async function onUserSpeech(text, language) {
 }
 
 async function sayText(text, emotion) {
+    // Pause mic so it doesn't pick up the avatar's speech
+    pauseListening();
+
     // Start lip sync animation
     speakText(text, emotion);
 
@@ -144,6 +147,7 @@ async function sayText(text, emotion) {
         const audioData = await speak(text, getDetectedLanguage(), sessionId);
         if (audioData) {
             await playAudio(audioData);
+            resumeListening();
             return;
         }
     } catch (err) {
@@ -159,6 +163,9 @@ async function sayText(text, emotion) {
     await new Promise((resolve) => {
         utterance.onend = resolve;
     });
+
+    // Resume mic after speaking is done
+    resumeListening();
 }
 
 function sleep(ms) {

@@ -39,11 +39,14 @@ export function initAvatar(canvas) {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0a0a0f);
 
-    camera = new THREE.PerspectiveCamera(35, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
+    const w = canvas.clientWidth || window.innerWidth;
+    const h = canvas.clientHeight || window.innerHeight;
+
+    camera = new THREE.PerspectiveCamera(35, w / h, 0.1, 100);
     camera.position.set(0, 0, 2.5);
 
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+    renderer.setSize(w, h);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
