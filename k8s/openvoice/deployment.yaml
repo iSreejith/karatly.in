@@ -16,10 +16,13 @@ spec:
       containers:
         - name: openvoice
           image: karatly-openvoice:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
           resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
             limits:
-              memory: "4Gi"
+              memory: "2Gi"
               cpu: "2"

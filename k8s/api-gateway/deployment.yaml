@@ -16,12 +16,12 @@ spec:
       containers:
         - name: api-gateway
           image: karatly-backend:latest
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
           env:
             - name: OLLAMA_BASE_URL
-              value: "http://ollama:11434"
+              value: "http://host.docker.internal:11434"
             - name: OPENVOICE_BASE_URL
               value: "http://openvoice:5000"
             - name: GEMINI_API_KEY
