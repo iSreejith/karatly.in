@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openvoice
+  namespace: karatly
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openvoice
+  template:
+    metadata:
+      labels:
+        app: openvoice
+    spec:
+      containers:
+        - name: openvoice
+          image: karatly-openvoice:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 5000
+          resources:
+            limits:
+              memory: "4Gi"
+              cpu: "2"

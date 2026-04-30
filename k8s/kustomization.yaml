@@ -1,0 +1,14 @@
+apiVersion: kustomize.build/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - frontend/deployment.yaml
+  - frontend/service.yaml
+  - api-gateway/deployment.yaml
+  - api-gateway/service.yaml
+  - ollama/deployment.yaml
+  - ollama/service.yaml
+  - ollama/init-job.yaml
+  - openvoice/deployment.yaml
+  - openvoice/service.yaml
