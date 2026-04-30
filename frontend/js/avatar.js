@@ -12,7 +12,9 @@ export function initAvatar() {
 
 export function setAvatarPhoto(base64Jpeg) {
     if (photoEl) {
-        photoEl.src = 'data:image/jpeg;base64,' + base64Jpeg;
+        photoEl.style.backgroundImage = 'url(data:image/jpeg;base64,' + base64Jpeg + ')';
+        photoEl.style.backgroundSize = 'cover';
+        photoEl.style.backgroundPosition = 'center';
     }
 }
 

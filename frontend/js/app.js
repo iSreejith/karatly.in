@@ -26,14 +26,27 @@ async function main() {
         setLoadingStatus('Starting camera...');
         await initCamera();
 
-        // Step 3: Capture face photo
+        // Step 3: Capture face photo — wait for camera to actually produce frames
         setLoadingStatus('Capturing your photo...');
-        await sleep(500); // let camera warm up
+        const video = document.getElementById('camera-feed');
+        // Wait until the video has real frames
+        for (let i = 0; i < 20; i++) {
+            if (video.videoWidth > 0 && video.videoHeight > 0 && video.readyState >= 2) break;
+            await sleep(250);
+        }
+        await sleep(500); // extra settle time
         const photoBase64 = captureFrame();
 
         // Step 4: Show avatar screen with photo
         initAvatar();
-        setAvatarPhoto(photoBase64);
+        if (photoBase64) {
+            setAvatarPhoto(photoBase64);
+        } else {
+            // Fallback: show a placeholder gradient circle
+            const el = document.getElementById('avatar-photo');
+            el.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+            el.style.border = '3px solid rgba(99, 102, 241, 0.6)';
+        }
         const language = navigator.language?.split('-')[0] || 'en';
         document.getElementById('language-indicator').textContent = language.toUpperCase();
         showScreen('avatar-screen');

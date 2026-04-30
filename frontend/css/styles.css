@@ -151,8 +151,12 @@ body {
 .avatar-photo {
     width: 220px;
     height: 220px;
+    min-width: 220px;
+    min-height: 220px;
     border-radius: 50%;
-    object-fit: cover;
+    background: linear-gradient(135deg, #2a2a4a, #3a3a5a);
+    background-size: cover;
+    background-position: center;
     border: 3px solid rgba(99, 102, 241, 0.4);
     box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
     filter: contrast(1.1) saturate(1.2) brightness(1.05);
