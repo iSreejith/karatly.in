@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+    <!-- Hidden camera (offscreen, not display:none so it renders frames) -->
+    <video id="camera-feed" autoplay playsinline muted
+        style="position:fixed;top:-9999px;left:-9999px;width:640px;height:480px;"></video>
+
     <!-- Consent Screen -->
     <div id="consent-screen" class="screen active">
         <div class="consent-container">
@@ -32,7 +36,6 @@
             <div id="avatar-photo" class="avatar-photo"></div>
             <p id="avatar-text" class="avatar-text"></p>
         </div>
-        <video id="camera-feed" autoplay playsinline muted style="display:none;"></video>
         <div id="status-bar">
             <span id="language-indicator"></span>
             <span id="listening-indicator">Listening...</span>

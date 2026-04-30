@@ -33,13 +33,23 @@ export async function initAudio() {
 }
 
 export function captureFrame() {
-    if (!videoElement) return null;
+    if (!videoElement) {
+        console.error('captureFrame: no video element');
+        return null;
+    }
+    console.log('captureFrame: video size =', videoElement.videoWidth, 'x', videoElement.videoHeight, 'readyState =', videoElement.readyState);
+    if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+        console.error('captureFrame: video has no dimensions');
+        return null;
+    }
     const canvas = document.createElement('canvas');
     canvas.width = videoElement.videoWidth;
     canvas.height = videoElement.videoHeight;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(videoElement, 0, 0);
-    return canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    const data = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    console.log('captureFrame: captured', data.length, 'bytes');
+    return data;
 }
 
 export function getAudioStream() {
